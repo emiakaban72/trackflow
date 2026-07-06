@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Tabel Negara (Countries)
+        // 1. Tabel Negara (Countries) - Murni Nama & Koordinat
         Schema::create('countries', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('code')->unique(); // Kode negara (Contoh: ID, US, DE)
-            $table->string('currency_code')->nullable(); // Kode mata uang
+            $table->string('name')->unique();
+            $table->decimal('lat', 10, 6)->nullable(); // Koordinat untuk Open-Meteo & Peta
+            $table->decimal('lng', 10, 6)->nullable(); // Koordinat untuk Open-Meteo & Peta
             $table->timestamps();
         });
 

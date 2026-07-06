@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'restcountries' => [
+          'base_url' => 'https://api.restcountries.com/countries/v5',
+          'api_key' => env('REST_COUNTRIES_API_KEY'),
+    ],
+
+    
 ];

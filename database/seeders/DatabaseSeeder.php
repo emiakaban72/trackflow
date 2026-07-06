@@ -13,47 +13,48 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('users')->insert([
-            'name' => 'Administrator',
-            'email' => 'admin@trackflow',
-            'password' => Hash::make('12345678'),
-            'created_at' => now(),
-            'updated_at' => now(),
+        // Cetak indikator pelacak
+        $this->command->info("--- SEEDER SEDANG BERJALAN SEKARANG ---");
+
+        // 1. Jalankan Seeder Negara (Mengisi 195 negara)
+        $this->call([
+            CountrySeeder::class,
         ]);
-
-        $countries = [
-            ['name' => 'Germany', 'code' => 'DE', 'currency_code' => 'EUR'],
-            ['name' => 'China', 'code' => 'CN', 'currency_code' => 'CNY'],
-            ['name' => 'Indonesia', 'code' => 'ID', 'currency_code' => 'IDR'],
-            ['name' => 'Australia', 'code' => 'AU', 'currency_code' => 'AUD'],
-        ];
-
-        foreach ($countries as $country) {
-            DB::table('countries')->insert([
-                'name' => $country['name'],
-                'code' => $country['code'],
-                'currency_code' => $country['currency_code'],
+        
+        // 2. Buat Akun Administrator Default dengan proteksi updateOrInsert dan Kolom Role
+        DB::table('users')->updateOrInsert(
+            ['email' => 'admin@supplysync.com'], // Jika email ini sudah ada, timpa saja datanya
+            [
+                'name' => 'Administrator',
+                'role' => 'admin', // Menentukan hak akses sebagai admin
+                'password' => Hash::make('12345678'),
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
-        }
+            ]
+        );
 
+        // 3. Isi Kamus Sentimen Positif dengan proteksi updateOrInsert
         $positiveWords = ['growth', 'increase', 'profit', 'stable', 'improve', 'success', 'boom', 'surge'];
         foreach ($positiveWords as $word) {
-            DB::table('positive_words')->insert([
-                'word' => $word,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('positive_words')->updateOrInsert(
+                ['word' => $word],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
+        // 4. Isi Kamus Sentimen Negatif dengan proteksi updateOrInsert
         $negativeWords = ['war', 'crisis', 'inflation', 'delay', 'disaster', 'decrease', 'drop', 'crash', 'loss'];
         foreach ($negativeWords as $word) {
-            DB::table('negative_words')->insert([
-                'word' => $word,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('negative_words')->updateOrInsert(
+                ['word' => $word],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
     }
 }
