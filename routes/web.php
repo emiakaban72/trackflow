@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\AdminOnly;
 use App\Http\Controllers\CountryController;
+use App\Http\Controllers\MapController;
 
 // ==========================================
 // RUTE AUTENTIKASI (PUBLIK)
@@ -56,3 +57,4 @@ Route::middleware(['auth', PreventBackHistory::class, AdminOnly::class])->prefix
 // Rute Pencarian Negara (dari teman)
 Route::get('/country', [CountryController::class, 'index'])->name('country.index');
 Route::post('/country', [CountryController::class, 'search'])->name('country.search');
+Route::get('/geospital/map', [MapController::class, 'index'])->name('map.index');

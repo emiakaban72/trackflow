@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use App\Services\CountryService;
 use App\Services\WeatherService;
 use App\Services\WorldBankService;
-use App\Services\ExchangeRateService; // 1. Panggil service baru ini
+use App\Services\ExchangeRateService;
+use App\Services\NewsSentimentService;
+use App\Services\RiskScoringService;
 use Illuminate\Support\Facades\DB;
 
 class CountryController extends Controller
@@ -14,18 +16,24 @@ class CountryController extends Controller
     protected $countryService;
     protected $weatherService;
     protected $worldBankService;
-    protected $exchangeRateService; // 2. Daftarkan properti
+    protected $exchangeRateService;
+    protected $newsSentimentService;
+    protected $riskScoringService;
 
     public function __construct(
         CountryService $countryService, 
         WeatherService $weatherService,
         WorldBankService $worldBankService,
-        ExchangeRateService $exchangeRateService // 3. Masukkan ke constructor
+        ExchangeRateService $exchangeRateService,
+        NewsSentimentService $newsSentimentService,
+        RiskScoringService $riskScoringService
     ) {
         $this->countryService = $countryService;
         $this->weatherService = $weatherService;
         $this->worldBankService = $worldBankService;
         $this->exchangeRateService = $exchangeRateService;
+        $this->newsSentimentService = $newsSentimentService;
+        $this->riskScoringService = $riskScoringService;
     }
 
     public function index()
@@ -36,12 +44,13 @@ class CountryController extends Controller
         $country = null;
         $weather = null;
         $economy = null;
-        $exchangeRate = null; // 4. Siapkan wadah untuk kurs
-
+        $exchangeRate = null;
+        $news = [];
+        $riskData = null; // Wadah untuk Skor Risiko
+        
         if ($result && !empty($result['data']['objects'])) {
             $country = $result['data']['objects'][0];
             
-            // ... (Kode Cuaca dan Ekonomi tetap sama seperti sebelumnya) ...
             if (isset($country['coordinates']['lat']) && isset($country['coordinates']['lng'])) {
                 $lat = number_format((float) $country['coordinates']['lat'], 6, '.', '');
                 $lng = number_format((float) $country['coordinates']['lng'], 6, '.', '');
@@ -52,20 +61,23 @@ class CountryController extends Controller
                 $economy = $this->worldBankService->getEconomyData($country['codes']['alpha_2']);
             }
 
-            // 5. Eksekusi API Kurs Mata Uang (Ambil kode mata uang, misal: IDR)
             if (isset($country['currencies'][0]['code'])) {
                 $currencyCode = $country['currencies'][0]['code'];
                 $exchangeRate = $this->exchangeRateService->getExchangeRate($currencyCode);
             }
+
+            $countryName = $country['names']['common'] ?? 'Indonesia';
+            $news = $this->newsSentimentService->getNewsWithSentiment($countryName);
+            
+            // Kalkulasi Skor Risiko Final
+            $riskData = $this->riskScoringService->calculateRisk($weather, $economy, $news);
         }
 
-        // Jangan lupa tambahkan $exchangeRate ke compact()
-        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate'));
+        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate', 'news', 'riskData'));
     }
 
     public function search(Request $request)
     {
-        // ... (Lakukan hal yang persis sama di dalam fungsi search() juga) ...
         $request->validate(['country' => 'required']);
         $countriesList = DB::table('countries')->orderBy('name', 'asc')->pluck('name');
         $result = $this->countryService->getCountry($request->country);
@@ -77,9 +89,10 @@ class CountryController extends Controller
         $country = $result['data']['objects'][0];
         $weather = null;
         $economy = null;
-        $exchangeRate = null; // Wadah kurs
+        $exchangeRate = null;
+        $news = [];
+        $riskData = null; // Wadah untuk Skor Risiko
 
-        // ... (Kode Cuaca dan Ekonomi di search) ...
         if (isset($country['coordinates']['lat']) && isset($country['coordinates']['lng'])) {
             $lat = number_format((float) $country['coordinates']['lat'], 6, '.', '');
             $lng = number_format((float) $country['coordinates']['lng'], 6, '.', '');
@@ -90,13 +103,17 @@ class CountryController extends Controller
             $economy = $this->worldBankService->getEconomyData($country['codes']['alpha_2']);
         }
 
-        // Eksekusi API Kurs Mata Uang
         if (isset($country['currencies'][0]['code'])) {
             $currencyCode = $country['currencies'][0]['code'];
             $exchangeRate = $this->exchangeRateService->getExchangeRate($currencyCode);
         }
 
-        // Jangan lupa tambahkan $exchangeRate ke compact()
-        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate'));
+        $countryName = $country['names']['common'] ?? $request->country;
+        $news = $this->newsSentimentService->getNewsWithSentiment($countryName);
+        
+        // Kalkulasi Skor Risiko Final
+        $riskData = $this->riskScoringService->calculateRisk($weather, $economy, $news);
+
+        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate', 'news', 'riskData'));
     }
 }

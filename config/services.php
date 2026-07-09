@@ -40,5 +40,11 @@ return [
           'api_key' => env('REST_COUNTRIES_API_KEY'),
     ],
 
+    'gnews' => [
+        'key' => env('GNEWS_API_KEY'),
+    ],
+        
+
+
     
 ];

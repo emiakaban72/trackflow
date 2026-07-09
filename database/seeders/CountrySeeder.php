@@ -9,9 +9,9 @@ class CountrySeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info('⏳ Menyuntikkan 195 negara berdaulat ke database...');
+        $this->command->info('🌍 Menyiapkan 195 Negara Dasar (Offline Base Data)...');
 
-        // FULL 195 NEGARA (Standar PBB) - 100% Offline & Anti-Gagal
+        // Daftar lengkap 195 negara murni tanpa negara abal-abal/duplikat
         $allCountries = [
             'Afghanistan'=>[33.0,65.0], 'Albania'=>[41.0,20.0], 'Algeria'=>[28.0,3.0], 'Andorra'=>[42.5,1.5], 'Angola'=>[-12.5,18.5], 
             'Antigua and Barbuda'=>[17.05,-61.8], 'Argentina'=>[-34.0,-64.0], 'Armenia'=>[40.0,45.0], 'Australia'=>[-27.0,133.0], 'Austria'=>[47.33,13.33], 
@@ -55,29 +55,24 @@ class CountrySeeder extends Seeder
             'Yemen'=>[15.0,48.0], 'Zambia'=>[-15.0,30.0], 'Zimbabwe'=>[-20.0,30.0]
         ];
 
-        $dataToInsert = [];
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // Menggunakan updateOrInsert agar kebal dari error duplicate entry!
         foreach ($allCountries as $name => $coords) {
-            $dataToInsert[] = [
-                'name' => $name,
-                'lat' => $coords[0],
-                'lng' => $coords[1],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+            DB::table('countries')->updateOrInsert(
+                ['name' => $name], // Kunci pencarian, jika ada di-update, jika tidak di-insert
+                [
+                    'lat' => $coords[0],
+                    'lng' => $coords[1],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
-        // Matikan proteksi foreign key sementara, kosongkan tabel, lalu suntikkan data
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        DB::table('countries')->truncate();
-        
-        // Pecah (chunk) data menjadi bagian kecil agar database tidak kelebihan beban memori saat insert
-        foreach (array_chunk($dataToInsert, 50) as $chunk) {
-            DB::table('countries')->insert($chunk);
-        }
-        
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $count = DB::table('countries')->count();
-        $this->command->info("✅ FINALISASI SUKSES! Sebanyak {$count} negara telah tersimpan permanen di database.");
+        $this->command->info("✅ SUKSES! {$count} Negara PBB telah disuntikkan tanpa memotong kuota API-mu.");
     }
 }

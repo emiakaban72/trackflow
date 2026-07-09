@@ -11,4 +11,9 @@ class Country extends Model
 
     // Hanya izinkan 3 kolom ini untuk diisi
     protected $fillable = ['name', 'lat', 'lng'];
+
+    public function ports()
+    {
+        return $this->hasMany(Port::class);
+    }
 }

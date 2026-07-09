@@ -2,14 +2,19 @@
 <div class="row g-3 mb-3 flex-shrink-0">
     <!-- Peta Risiko (Scoring Engine) -->
     <div class="col-md-3">
-        <div class="card-corporate p-3 h-100" style="background-color: var(--matcha-50); border: 1px solid var(--matcha-500);">
+        <div class="card-corporate p-3 h-100" style="background-color: {{ $riskData['bg'] ?? 'var(--matcha-50)' }}; border: 1px solid {{ $riskData['border'] ?? 'var(--matcha-500)' }};">
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="text-uppercase fw-bold text-matcha" style="font-size: 0.70rem;">Total Risk Score</span>
-                <i class="fa-solid fa-shield-halved text-matcha fs-6"></i>
+                <span class="text-uppercase fw-bold text-dark" style="font-size: 0.70rem;">Total Risk Score</span>
+                <i class="fa-solid fa-shield-halved text-{{ $riskData['color'] ?? 'success' }} fs-6"></i>
             </div>
-            <h3 class="fw-bold text-dark mb-0">28 <span class="fs-6 text-muted fw-normal">/ Low</span></h3>
-            <p class="mt-1 mb-0 text-success" style="font-size: 0.75rem; font-weight: 600;">
-                <i class="fa-solid fa-check-circle me-1"></i> Aman untuk operasional
+            
+            <h3 class="fw-bold text-dark mb-0">
+                {{ $riskData['score'] ?? '0' }} 
+                <span class="fs-6 text-muted fw-normal">/ {{ $riskData['status'] ?? 'N/A' }}</span>
+            </h3>
+            
+            <p class="mt-1 mb-0 text-{{ $riskData['color'] ?? 'success' }}" style="font-size: 0.75rem; font-weight: 600;">
+                <i class="fa-solid {{ $riskData['icon'] ?? 'fa-check-circle' }} me-1"></i> {{ $riskData['text'] ?? '--' }}
             </p>
         </div>
     </div>

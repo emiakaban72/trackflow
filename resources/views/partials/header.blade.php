@@ -1,41 +1,142 @@
+<!-- KUMPULAN CSS UNTUK ANIMASI & INTERAKSI -->
+<style>
+    /* Efek Kapsul Pencarian */
+    .search-capsule {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    
+    .search-capsule:hover, .search-capsule:focus-within {
+        border-color: var(--matcha-400);
+        box-shadow: 0 6px 16px rgba(34, 197, 94, 0.12);
+        transform: translateY(-2px);
+    }
+
+    /* Efek Tombol Monitor (DIPERBAIKI) */
+    .btn-monitor {
+        transition: all 0.2s ease-in-out;
+        color: #ffffff !important; /* Pastikan teks selalu putih */
+    }
+    .btn-monitor:hover {
+        /* Menggunakan brightness untuk menggelapkan warna secara natural, anti-gagal! */
+        filter: brightness(0.85); 
+        color: #ffffff !important; /* Kunci warna teks tetap putih */
+        transform: scale(1.05);
+    }
+    .btn-monitor:active {
+        transform: scale(0.95);
+    }
+
+    /* Animasi denyut untuk indikator server */
+    .pulse-dot {
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+</style>
+
 <!-- HEADER & FORM PENCARIAN -->
-<div class="d-flex justify-content-between align-items-end mb-3 flex-shrink-0">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 flex-shrink-0 gap-3" style="animation: fadeInDown 0.5s ease-out;">
+    
+    <!-- Judul & Sub-judul -->
     <div>
-        <h3 class="mb-1 fw-bold text-dark">Global Country Dashboard</h3>
-        <p class="text-muted mb-0" style="font-size: 0.9rem;">Pusat komando pemantauan risiko rantai pasok global.</p>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h4 class="mb-0 fw-bold text-dark" style="letter-spacing: -0.5px;">Global Country Dashboard</h4>
+            
+            <!-- Badge Status & Live Clock -->
+            <div class="d-flex align-items-center bg-success-subtle border border-success-subtle rounded-pill px-2 py-1 gap-2 shadow-sm" style="font-size: 0.65rem;">
+                <span class="d-flex align-items-center text-success fw-bold">
+                    <span class="rounded-circle bg-success me-1 pulse-dot" style="width: 6px; height: 6px;"></span>
+                    Node 10
+                </span>
+                <span class="text-success opacity-25">|</span>
+                <span class="text-success fw-bold" id="live-clock">
+                    <i class="fa-regular fa-clock me-1"></i> 00:00:00
+                </span>
+            </div>
+        </div>
+        <p class="text-secondary mb-0" style="font-size: 0.85rem;"><i class="fa-solid fa-satellite-dish me-1"></i>Pusat komando pemantauan risiko rantai pasok global.</p>
     </div>
 
-    <div class="d-flex gap-2 align-items-center">
-        <span class="text-muted fw-bold" style="font-size: 0.85rem;"><i class="fa-solid fa-filter me-1"></i> PILIH NEGARA:</span>
-        
-        <form action="{{ route('country.search') }}" method="POST" class="input-group shadow-sm rounded" style="width: 380px;">
+    <!-- Form Pencarian (Interactive Capsule) -->
+    <div class="d-flex align-items-center">
+        <form id="monitor-form" action="{{ route('country.search') }}" method="POST" class="search-capsule d-flex align-items-center p-1 rounded-pill" style="width: 360px;">
             @csrf
-            <!-- Dropdown Select2 -->
-            <!-- Dropdown Select2 -->
-            <select name="country" class="form-select select2-country border-0">
-                @php
-                    $selected = request('country', isset($country) ? ($country['names']['common'] ?? 'Indonesia') : 'Indonesia');
-                    // Proteksi: Jika $countriesList tidak dikirim oleh controller, gunakan array kosong
-                    $list = $countriesList ?? []; 
-                @endphp
-                
-                @forelse($list as $c)
-                    <option value="{{ $c }}" {{ $selected == $c ? 'selected' : '' }}>
-                        {{ $c }}
-                    </option>
-                @empty
-                    <option value="Indonesia">Indonesia</option>
-                @endforelse
-            </select>
-            <button type="submit" id="btn-monitor" class="btn text-white fw-bold px-4 border-0" style="background-color: var(--matcha-500);">
-                <i class="fa-solid fa-magnifying-glass me-2"></i> Pantau
+            
+            <div class="ps-3 pe-2 text-muted flex-shrink-0">
+                <i class="fa-solid fa-earth-americas" style="font-size: 0.9rem; color: var(--matcha-500);"></i>
+            </div>
+
+            <div class="flex-grow-1 px-1" style="min-width: 0;">
+                <select name="country" class="form-select select2-country border-0 bg-transparent shadow-none p-0" style="width: 100%; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #374151;">
+                    @php
+                        $selected = request('country', isset($country) ? ($country['names']['common'] ?? 'Indonesia') : 'Indonesia');
+                        $list = $countriesList ?? []; 
+                    @endphp
+                    
+                    @forelse($list as $c)
+                        <option value="{{ $c }}" {{ $selected == $c ? 'selected' : '' }}>
+                            {{ $c }}
+                        </option>
+                    @empty
+                        <option value="Indonesia">Indonesia</option>
+                    @endforelse
+                </select>
+            </div>
+            
+            <!-- Tombol Search (Dikembalikan ke Kaca Pembesar) -->
+            <button type="submit" id="btn-monitor" class="btn btn-monitor fw-bold d-flex align-items-center justify-content-center rounded-pill px-3 flex-shrink-0 border-0 shadow-sm" style="background-color: var(--matcha-500); height: 34px;">
+                <i class="fa-solid fa-magnifying-glass me-1" id="btn-icon" style="font-size: 0.75rem;"></i>
+                <span id="btn-text" style="font-size: 0.75rem;">Monitor</span>
             </button>
         </form>
     </div>
 </div>
 
+<!-- ALERT ERROR MODERN -->
 @if(session('error'))
-    <div class="alert alert-danger mb-3 border-0 shadow-sm rounded-3">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i> {{ session('error') }}
+    <div class="alert alert-danger mb-4 border-0 shadow-sm d-flex align-items-center py-2 px-3" style="background-color: #fef2f2; border-left: 4px solid #ef4444 !important; border-radius: 8px; color: #991b1b; animation: fadeIn 0.4s ease-out;">
+        <i class="fa-solid fa-triangle-exclamation me-3 fs-5"></i>
+        <div>
+            <strong style="font-size: 0.85rem;">Peringatan Sistem:</strong> 
+            <span style="font-size: 0.85rem;">{{ session('error') }}</span>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
     </div>
 @endif
+
+<!-- SCRIPT UNTUK INTERAKSI -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        // 1. LIVE CLOCK ENGINE
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('live-clock').innerHTML = `<i class="fa-regular fa-clock me-1"></i> ${timeString}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock(); 
+
+        // 2. LOADING STATE BUTTON
+        const form = document.getElementById('monitor-form');
+        const btn = document.getElementById('btn-monitor');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+
+        form.addEventListener('submit', function() {
+            btn.classList.add('disabled');
+            btn.style.opacity = '0.8';
+            btn.style.cursor = 'wait';
+            
+            btnIcon.className = 'spinner-border spinner-border-sm me-1';
+            btnText.innerText = 'Analyzing...';
+        });
+
+    });
+</script>

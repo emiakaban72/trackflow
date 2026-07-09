@@ -154,9 +154,12 @@
                     </li>
 
                     <div class="menu-label">Geospatial Monitoring</div>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-cloud-bolt me-2"></i> Global Weather Map</a>
-                    </li>
+                   <li class="nav-item">
+    <!-- Ubah href dan berikan logika active menu -->
+    <a class="nav-link {{ request()->routeIs('map.index') ? 'active' : '' }}" href="{{ route('map.index') }}">
+        <i class="fa-solid fa-cloud-bolt me-2"></i> Global Weather Map
+    </a>
+</li>
                     <li class="nav-item">
                         <a class="nav-link" href="#"><i class="fa-solid fa-anchor me-2"></i> Port Locations</a>
                     </li>
