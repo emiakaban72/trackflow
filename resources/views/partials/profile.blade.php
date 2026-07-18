@@ -34,8 +34,31 @@
                 <h6 class="fw-bold text-dark mb-0">{{ $country['codes']['alpha_2'] ?? '--' }}</h6>
             </div>
             
-            <!-- Tombol untuk memicu Modal -->
-            <div class="border-start ps-3 ms-2">
+            @php
+                $cName = $country['names']['common'] ?? '';
+                $isFavorite = false;
+                if (auth()->check()) {
+                    $dbCountry = \App\Models\Country::where('name', $cName)->first();
+                    if ($dbCountry) {
+                        $isFavorite = \App\Models\Watchlist::where('user_id', auth()->id())
+                            ->where('country_id', $dbCountry->id)
+                            ->exists();
+                    }
+                } else {
+                    $isFavorite = in_array($cName, session('favorite_countries', []), true);
+                }
+            @endphp
+
+            <!-- Tombol untuk memicu Modal & Favorite -->
+            <div class="border-start ps-3 ms-2 d-flex gap-2">
+                <form action="{{ route('favorite.toggle') }}" method="POST" class="m-0">
+                    @csrf
+                    <input type="hidden" name="country_name" value="{{ $cName }}">
+                    <button type="submit" class="btn btn-sm {{ $isFavorite ? 'btn-warning text-white' : 'btn-outline-warning' }} rounded-pill px-3" style="{{ $isFavorite ? 'background-color: var(--matcha-500); border-color: var(--matcha-500); color: white;' : 'color: var(--matcha-500); border-color: var(--matcha-500);' }}">
+                        <i class="{{ $isFavorite ? 'fa-solid' : 'fa-regular' }} fa-star me-1"></i> Favorite
+                    </button>
+                </form>
+
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#countryDetailModal">
                     <i class="fa-solid fa-list-ul me-1"></i> Detail
                 </button>

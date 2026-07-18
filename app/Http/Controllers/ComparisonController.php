@@ -11,7 +11,7 @@ use App\Services\NewsSentimentService;
 use App\Services\RiskScoringService;
 use Illuminate\Support\Facades\DB;
 
-class CountryController extends Controller
+class ComparisonController extends Controller
 {
     protected $countryService;
     protected $weatherService;
@@ -38,83 +38,72 @@ class CountryController extends Controller
 
     public function index(Request $request)
     {
-        $targetCountry = $request->query('country', 'Indonesia');
+        $country1Name = $request->query('country1', 'Germany');
+        $country2Name = $request->query('country2', 'Australia');
+
         $countriesList = DB::table('countries')->orderBy('name', 'asc')->pluck('name');
-        $result = $this->countryService->getCountry($targetCountry);
-        
+
+        $data1 = $this->getCountryComparisonData($country1Name);
+        $data2 = $this->getCountryComparisonData($country2Name);
+
+        // Jika salah satu data negara tidak ditemukan sama sekali di service API
+        if (!$data1['country'] && !$data2['country']) {
+            session()->now('error', 'Gagal memuat data perbandingan untuk kedua negara. Silakan coba kombinasi lain.');
+        } elseif (!$data1['country']) {
+            session()->now('error', "Gagal memuat data untuk negara: {$country1Name}.");
+        } elseif (!$data2['country']) {
+            session()->now('error', "Gagal memuat data untuk negara: {$country2Name}.");
+        }
+
+        return view('analytics.comparison', compact('countriesList', 'country1Name', 'country2Name', 'data1', 'data2'));
+    }
+
+    private function getCountryComparisonData($countryName)
+    {
+        $result = $this->countryService->getCountry($countryName);
+
         $country = null;
         $weather = null;
         $economy = null;
         $exchangeRate = null;
         $news = [];
-        $riskData = null; // Wadah untuk Skor Risiko
-        
+        $riskData = null;
+
         if ($result && !empty($result['data']['objects'])) {
             $country = $result['data']['objects'][0];
             
+            // 1. Ekstrak Cuaca
             if (isset($country['coordinates']['lat']) && isset($country['coordinates']['lng'])) {
                 $lat = number_format((float) $country['coordinates']['lat'], 6, '.', '');
                 $lng = number_format((float) $country['coordinates']['lng'], 6, '.', '');
                 $weather = $this->weatherService->getCurrentWeather($lat, $lng);
             }
 
+            // 2. Ekstrak Ekonomi
             if (isset($country['codes']['alpha_2'])) {
                 $economy = $this->worldBankService->getEconomyData($country['codes']['alpha_2']);
             }
 
+            // 3. Ekstrak Kurs
             if (isset($country['currencies'][0]['code'])) {
                 $currencyCode = $country['currencies'][0]['code'];
                 $exchangeRate = $this->exchangeRateService->getExchangeRate($currencyCode);
             }
 
-            $countryName = $country['names']['common'] ?? $targetCountry;
-            $news = $this->newsSentimentService->getNewsWithSentiment($countryName);
+            // 4. Ekstrak Berita
+            $cName = $country['names']['common'] ?? $countryName;
+            $news = $this->newsSentimentService->getNewsWithSentiment($cName);
             
-            // Kalkulasi Skor Risiko Final
+            // 5. Kalkulasi Risk Engine
             $riskData = $this->riskScoringService->calculateRisk($weather, $economy, $news);
         }
 
-        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate', 'news', 'riskData'));
-    }
-
-    public function search(Request $request)
-    {
-        $request->validate(['country' => 'required']);
-        $countriesList = DB::table('countries')->orderBy('name', 'asc')->pluck('name');
-        $result = $this->countryService->getCountry($request->country);
-
-        if (!$result || empty($result['data']['objects'])) {
-            return back()->with('error', 'Negara tidak ditemukan');
-        }
-
-        $country = $result['data']['objects'][0];
-        $weather = null;
-        $economy = null;
-        $exchangeRate = null;
-        $news = [];
-        $riskData = null; // Wadah untuk Skor Risiko
-
-        if (isset($country['coordinates']['lat']) && isset($country['coordinates']['lng'])) {
-            $lat = number_format((float) $country['coordinates']['lat'], 6, '.', '');
-            $lng = number_format((float) $country['coordinates']['lng'], 6, '.', '');
-            $weather = $this->weatherService->getCurrentWeather($lat, $lng);
-        }
-
-        if (isset($country['codes']['alpha_2'])) {
-            $economy = $this->worldBankService->getEconomyData($country['codes']['alpha_2']);
-        }
-
-        if (isset($country['currencies'][0]['code'])) {
-            $currencyCode = $country['currencies'][0]['code'];
-            $exchangeRate = $this->exchangeRateService->getExchangeRate($currencyCode);
-        }
-
-        $countryName = $country['names']['common'] ?? $request->country;
-        $news = $this->newsSentimentService->getNewsWithSentiment($countryName);
-        
-        // Kalkulasi Skor Risiko Final
-        $riskData = $this->riskScoringService->calculateRisk($weather, $economy, $news);
-
-        return view('dashboard', compact('country', 'countriesList', 'weather', 'economy', 'exchangeRate', 'news', 'riskData'));
+        return [
+            'country' => $country,
+            'weather' => $weather,
+            'economy' => $economy,
+            'exchangeRate' => $exchangeRate,
+            'riskData' => $riskData,
+        ];
     }
 }

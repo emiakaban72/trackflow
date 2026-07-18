@@ -22,21 +22,4 @@
 
     </div>
 
-    <!-- SCRIPT SELECT2 -->
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        let waitForJQuery = setInterval(function () {
-            if (typeof window.jQuery !== 'undefined') {
-                clearInterval(waitForJQuery);
-                const $ = window.jQuery;
-                if ($.fn.select2) {
-                    $('.select2-country').select2({ 
-                        width: '100%',
-                        theme: "bootstrap-5" 
-                    });
-                }
-            }
-        }, 100);
-    });
-    </script>
 @endsection

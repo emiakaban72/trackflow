@@ -15,13 +15,14 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
-            --matcha-50: #f4f9f4;
-            --matcha-100: #e3efe3;
+            --matcha-50: #fff7ed;
+            --matcha-100: #ffedd5;
             --matcha-500: #ea6416;
             --matcha-700: #ea6416;
             --corporate-dark: #0f172a;
@@ -31,27 +32,35 @@
         /* Mengunci seluruh halaman agar tidak bisa di-scroll */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #000408;
+            background-color: #f8fafc;
             color: var(--corporate-dark);
-            height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         /* Pengaturan tinggi dan scroll independen untuk Sidebar */
-        .sidebar {
-            background-color: #ffffff;
-            border-right: 1px solid #e2e8f0;
-            height: 100vh;
-            overflow-y: auto;
-            padding-bottom: 2rem;
-            /* Ruang napas di bagian paling bawah */
+        @media (min-width: 768px) {
+            .sidebar {
+                background-color: #ffffff;
+                border-right: 1px solid #e2e8f0;
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                height: 100vh;
+                overflow-y: auto;
+                padding-bottom: 2rem;
+                z-index: 1000;
+            }
+            .main-content {
+                margin-left: 16.666667%; /* matches col-md-2 */
+            }
         }
 
         /* Pengaturan tinggi dan scroll independen untuk Konten Utama */
         .main-content {
             background-color: #f8fafc;
-            height: 100vh;
-            overflow-y: auto;
+            min-height: 100vh;
+            padding-bottom: 3rem;
         }
 
         /* Custom Scrollbar Elegan untuk Sidebar & Konten */
@@ -105,9 +114,10 @@
         }
 
         .nav-link:hover,
-        .nav-link.active {
-            background-color: var(--matcha-50);
-            color: var(--matcha-700);
+        .nav-link.active,
+        .nav-link.text-success {
+            background-color: var(--matcha-50) !important;
+            color: var(--matcha-700) !important;
         }
 
         .card-corporate {
@@ -147,37 +157,52 @@
 
                     <div class="menu-label">Risk & Analytics</div>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-shield-halved me-2"></i> Risk Scoring Engine</a>
+                        <a class="nav-link {{ request()->routeIs('analytics.risk') ? 'active fw-bold text-success' : '' }}"
+                            href="{{ route('analytics.risk') }}">
+                            <i class="fa-solid fa-shield-halved me-2"></i> Risk Scoring Engine
+                        </a>
                     </li>
+
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-chart-pie me-2"></i> Data Visualization</a>
+                        <a class="nav-link {{ request()->routeIs('analytics.visualization') ? 'active fw-bold text-success' : '' }}"
+                            href="{{ route('analytics.visualization') }}">
+                            <i class="fa-solid fa-chart-pie me-2"></i> Data Visualization
+                        </a>
                     </li>
 
                     <div class="menu-label">Geospatial Monitoring</div>
-                   <li class="nav-item">
-    <!-- Ubah href dan berikan logika active menu -->
-    <a class="nav-link {{ request()->routeIs('map.index') ? 'active' : '' }}" href="{{ route('map.index') }}">
-        <i class="fa-solid fa-cloud-bolt me-2"></i> Global Weather Map
-    </a>
-</li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-anchor me-2"></i> Port Locations</a>
+                        <a class="nav-link {{ request()->routeIs('map.index') ? 'active' : '' }}"
+                            href="{{ route('map.index') }}">
+                            <i class="fa-solid fa-map-location-dot me-2"></i> Geospatial Map
+                        </a>
                     </li>
+                   
 
                     <div class="menu-label">Market Intelligence</div>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-coins me-2"></i> Currency Impact</a>
+                        <a class="nav-link {{ request()->routeIs('market.currency') ? 'active' : '' }}"
+                            href="{{ route('market.currency') }}">
+                            <i class="fa-solid fa-coins me-2"></i> Currency Impact
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-newspaper me-2"></i> News & Sentiment</a>
+                        <a class="nav-link {{ request()->routeIs('market.news') ? 'active' : '' }}"
+                            href="{{ route('market.news') }}">
+                            <i class="fa-solid fa-newspaper me-2"></i> News & Sentiment
+                        </a>
                     </li>
 
                     <div class="menu-label">Tools & Workspace</div>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-scale-balanced me-2"></i> Country Comparison</a>
+                        <a class="nav-link {{ request()->routeIs('analytics.comparison') ? 'active' : '' }}" href="{{ route('analytics.comparison') }}">
+                            <i class="fa-solid fa-scale-balanced me-2"></i> Country Comparison
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fa-solid fa-bookmark me-2"></i> My Watchlist</a>
+                        <a class="nav-link {{ request()->routeIs('favorite.index') ? 'active' : '' }}" href="{{ route('favorite.index') }}">
+                            <i class="fa-solid fa-star me-2"></i> My Favorite
+                        </a>
                     </li>
 
                     <!-- AWAL MENU KHUSUS ADMIN -->
@@ -221,7 +246,8 @@
     <script>
         $(document).ready(function() {
             $('.select2-country').select2({
-                width: 'resolve'
+                theme: 'bootstrap-5',
+                width: '100%'
             });
         });
     </script>
