@@ -93,6 +93,45 @@ Route::get('/api/weather/live', function (Request $request, WeatherService $weat
     return response()->json($weather);
 });
 
+// Endpoint REST API Tambahan sesuai Spesifikasi Tugas Akhir
+Route::get('/api/risk', function (Request $request, App\Services\CountryService $countryService, WeatherService $weatherService, App\Services\WorldBankService $worldBankService, App\Services\NewsSentimentService $newsSentimentService, App\Services\RiskScoringService $riskScoringService) {
+    $countryName = $request->query('country', 'Indonesia');
+    $result = $countryService->getCountry($countryName);
+    if ($result && !empty($result['data']['objects'])) {
+        $country = $result['data']['objects'][0];
+        $weather = null;
+        if (isset($country['coordinates']['lat']) && isset($country['coordinates']['lng'])) {
+            $weather = $weatherService->getCurrentWeather($country['coordinates']['lat'], $country['coordinates']['lng']);
+        }
+        $economy = isset($country['codes']['alpha_2']) ? $worldBankService->getEconomyData($country['codes']['alpha_2']) : null;
+        $news = $newsSentimentService->getNewsWithSentiment($country['names']['common'] ?? $countryName);
+        $riskData = $riskScoringService->calculateRisk($weather, $economy, $news);
+        return response()->json([
+            'country' => $countryName,
+            'risk_data' => $riskData
+        ]);
+    }
+    return response()->json(['error' => 'Country not found'], 404);
+});
+
+Route::get('/api/news', function (Request $request, App\Services\NewsSentimentService $newsSentimentService) {
+    $countryName = $request->query('country', 'Indonesia');
+    $news = $newsSentimentService->getNewsWithSentiment($countryName);
+    return response()->json([
+        'country' => $countryName,
+        'news' => $news
+    ]);
+});
+
+Route::get('/api/currency', function (Request $request, App\Services\ExchangeRateService $exchangeRateService) {
+    $currencyCode = $request->query('code', 'IDR');
+    $rate = $exchangeRateService->getExchangeRate($currencyCode);
+    return response()->json([
+        'currency' => $currencyCode,
+        'rate_vs_usd' => $rate
+    ]);
+});
+
 
 // // Rute untuk Market Intelligence
 Route::get('/market/currency', [MarketIntelligenceController::class, 'currency'])->name('market.currency');
