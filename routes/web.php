@@ -1,13 +1,23 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
+use Illuminate\Http\Request;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\AdminOnly;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\MapController;
+use App\Models\Port; // Jangan lupa panggil model Port di atas
+use App\Models\Country;
+use App\Services\WeatherService;
+use App\Http\Controllers\MarketIntelligenceController;
+use App\Http\Controllers\RiskController;
+use App\Http\Controllers\VisualizationController;
+use App\Http\Controllers\ComparisonController;
+use App\Http\Controllers\FavoriteController;
+
+
 
 // ==========================================
 // RUTE AUTENTIKASI (PUBLIK)
@@ -23,8 +33,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // GAS! Arahkan langsung ke CountryController agar semua API otomatis jalan
 Route::get('/', [CountryController::class, 'index']); 
 
-// Endpoint untuk mengambil data detail negara secara real-time via AJAX
-Route::get('/country-detail', [DashboardController::class, 'getCountryDetail']);
 
 // ==========================================
 // RUTE KHUSUS ADMIN (DIGEMBOK MIDDLEWARE AUTH & PREFIX /admin)
@@ -57,4 +65,44 @@ Route::middleware(['auth', PreventBackHistory::class, AdminOnly::class])->prefix
 // Rute Pencarian Negara (dari teman)
 Route::get('/country', [CountryController::class, 'index'])->name('country.index');
 Route::post('/country', [CountryController::class, 'search'])->name('country.search');
-Route::get('/geospital/map', [MapController::class, 'index'])->name('map.index');
+
+// 1. Rute untuk menampilkan Halaman Peta
+Route::get('/geospatial/map', [MapController::class, 'index'])->name('map.index');
+
+// 2. Rute REST API untuk menyedot data pelabuhan
+// Tambahkan '/api' di sini agar cocok dengan perintah fetch() di Javascript
+Route::get('/api/ports', function () {
+    return response()->json(
+        Port::select('ports.name', 'ports.code', 'ports.lat', 'ports.lng', 'countries.name as country_name')
+            ->join('countries', 'ports.country_id', '=', 'countries.id')
+            ->get()
+    );
+});
+
+
+// Endpoint untuk mengambil titik koordinat negara di peta
+Route::get('/api/countries', function () {
+    return response()->json(Country::select('name', 'lat', 'lng')->get());
+});
+
+// Endpoint untuk menyedot cuaca satelit secara Real-Time via WeatherService
+Route::get('/api/weather/live', function (Request $request, WeatherService $weatherService) {
+    $request->validate(['lat' => 'required', 'lng' => 'required']);
+    
+    $weather = $weatherService->getCurrentWeather($request->lat, $request->lng);
+    return response()->json($weather);
+});
+
+
+// // Rute untuk Market Intelligence
+Route::get('/market/currency', [MarketIntelligenceController::class, 'currency'])->name('market.currency');
+Route::get('/market/news', [MarketIntelligenceController::class, 'news'])->name('market.news');
+
+
+
+// // Route untuk halaman Risk Scoring Engine
+Route::get('/analytics/risk', [RiskController::class, 'index'])->name('analytics.risk');
+Route::get('/analytics/visualization', [VisualizationController::class, 'index'])->name('analytics.visualization');
+Route::get('/analytics/comparison', [ComparisonController::class, 'index'])->name('analytics.comparison');
+Route::get('/favorite', [FavoriteController::class, 'index'])->name('favorite.index');
+Route::post('/favorite/toggle', [FavoriteController::class, 'toggle'])->name('favorite.toggle');

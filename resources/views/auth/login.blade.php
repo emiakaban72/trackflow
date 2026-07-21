@@ -9,8 +9,8 @@
     <style>
         :root {
             --corporate-dark: #1E293B;
-            --matcha-500: #e68327;
-            --matcha-700: #ec8e1b;
+            --matcha-500: #f97316;
+            --matcha-700: #ea580c;
         }
         body {
             background-color: #F8FAFC;

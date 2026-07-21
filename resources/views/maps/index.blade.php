@@ -12,7 +12,7 @@
     .map-container {
         position: relative;
         /* Kalkulasi: Tinggi layar penuh dikurangi ruang untuk header, padding atas, dan margin bawah */
-        height: calc(100vh - 150px); 
+        height: calc(107vh - 150px); 
         width: 100%;
         border-radius: 12px;
         overflow: hidden;
@@ -115,68 +115,252 @@
         
         // 1. INISIALISASI PETA
         const map = L.map('geospatialMap', {
-            center: [2.5, 112.5], // Center di tengah Asia/Indonesia
+            center: [2.5, 112.5], 
             zoom: 4,
             zoomControl: false 
         });
 
-        // Pindahkan tombol zoom ke bawah kiri (di bawah kolom pencarian)
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-        // Tile Layer yang bersih (Voyager)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors © CARTO',
+            attribution: '© OpenStreetMap contributors',
             maxZoom: 18
         }).addTo(map);
 
-        // 2. LAYER GROUPS
+        // 2. LAYER GROUPS & CLUSTERING
         const weatherLayer = L.layerGroup().addTo(map);
-        
-        // KUNCI PROFESIONAL: MarkerClusterGroup untuk menyatukan ribuan titik pelabuhan!
         const portCluster = L.markerClusterGroup({
             maxClusterRadius: 50,
             iconCreateFunction: function(cluster) {
                 return L.divIcon({ 
-                    html: `<div style="background-color: var(--matcha-500); color: white; width: 30px; height: 30px; display:flex; align-items:center; justify-content:center; border-radius: 50%; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.2);">${cluster.getChildCount()}</div>`, 
+                    html: `<div style="background-color: var(--matcha-500); color: white; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border-radius: 50%; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.2);">${cluster.getChildCount()}</div>`, 
                     className: 'my-cluster-icon', 
-                    iconSize: L.point(30, 30) 
+                    iconSize: L.point(32, 32) 
                 });
             }
         });
         map.addLayer(portCluster);
 
-        // 3. GENERATE PELABUHAN BANYAK SECARA OTOMATIS (Simulasi 50 Pelabuhan untuk test Cluster)
+        // 3. TARIK DATA DARI REST API BUATAN SENDIRI (AJAX/FETCH ES6)
+        let realPorts = []; // Siapkan wadah kosong
+        const portMarkers = {}; // Wadah referensi marker untuk pencarian
+
         const portIcon = L.divIcon({
             className: 'custom-port-icon',
-            html: `<div style="background-color: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
+            html: `<div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
         });
 
-        // Kita tebar 50 pelabuhan secara acak di sekitar Asia sebagai demonstrasi clustering
-        for (let i = 0; i < 50; i++) {
-            let randLat = 2.5 + (Math.random() - 0.5) * 30; // Sekitar Asia
-            let randLng = 112.5 + (Math.random() - 0.5) * 40;
-            
-            let marker = L.marker([randLat, randLng], {icon: portIcon})
-                .bindPopup(`<strong style="font-size:0.85rem;">Port Cluster Demo #${i+1}</strong><br><small class="text-muted">Status: Operational</small>`);
-            
-            portCluster.addLayer(marker);
+        // Memanggil endpoint GET /api/ports yang baru saja kamu buat
+        fetch('/api/ports')
+            .then(response => response.json())
+            .then(data => {
+                realPorts = data; // Simpan data dari database ke variabel JavaScript
+
+                // Looping data dari database untuk ditancapkan ke peta
+                realPorts.forEach(port => {
+                    // Pastikan lat dan lng bukan null
+                    if (port.lat && port.lng) {
+                        const marker = L.marker([port.lat, port.lng], {icon: portIcon});
+                        
+                        portMarkers[port.code] = marker;
+
+                        marker.bindPopup(`
+                            <div class="text-center p-1">
+                                <strong style="font-size:0.95rem; color: var(--matcha-700);">${port.name}</strong>
+                                <hr class="my-1">
+                                <small class="text-muted d-block">Negara: <b>${port.country_name}</b></small>
+                                <small class="text-muted d-block">Kode: <b>${port.code}</b></small>
+                                <span class="badge bg-success mt-2" style="font-size: 0.65rem;">Status: Operational</span>
+                            </div>
+                        `);
+                        
+                        portCluster.addLayer(marker);
+                    }
+                });
+            })
+            .catch(error => console.error('Gagal mengambil data pelabuhan:', error));
+
+        // 4. LOGIKA PENCARIAN (THE SEARCH ENGINE) DENGAN FUZZY LOGIC
+        const searchInput = document.getElementById('mapSearchInput');
+        const searchBtn = document.querySelector('.map-search-box button');
+
+        // Fungsi "Pengukur Jarak Teks" (Levenshtein Distance)
+        function getEditDistance(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1, // Substitusi huruf
+                            Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1) // Tambah / Hapus huruf
+                        );
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
         }
 
-        // 4. ANIMASI RADAR CUACA (Ini adalah indikator ancaman cuaca/Weather Threat)
-        const weatherIcon = L.divIcon({
+        function executeSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            if(!query) return;
+
+            let bestMatch = null;
+            let lowestDistance = 999; // Inisialisasi jarak terjauh
+
+            realPorts.forEach(p => {
+                const portName = (p.name || '').toLowerCase();
+                const countryName = (p.country_name || '').toLowerCase();
+                const portCode = (p.code || '').toLowerCase();
+
+                // Tahap 1: Pencarian Parsial (Ngetik setengah jalan tetap ketemu)
+                if (portName.includes(query) || countryName.includes(query) || portCode.includes(query)) {
+                    bestMatch = p;
+                    lowestDistance = 0; // Jarak 0 = Cocok Sempurna
+                    return; 
+                }
+
+                // Tahap 2: Typo Tolerance (Pencarian Fuzzy untuk yang salah ketik)
+                // Hanya aktif jika user ngetik minimal 4 huruf agar akurat
+                if (query.length >= 4 && lowestDistance > 0) {
+                    // Kita potong nama pelabuhan di database agar panjangnya sama dengan ketikan user
+                    const slicedPortName = portName.substring(0, query.length);
+                    const slicedCountry = countryName.substring(0, query.length);
+                    
+                    const distName = getEditDistance(query, slicedPortName);
+                    const distCountry = getEditDistance(query, slicedCountry);
+                    const minError = Math.min(distName, distCountry);
+                    
+                    // Mentoleransi maksimal 2 huruf yang salah ketik (Jarak <= 2)
+                    if (minError <= 2 && minError < lowestDistance) {
+                        lowestDistance = minError;
+                        bestMatch = p;
+                    }
+                }
+            });
+
+            // Eksekusi Peta jika menemukan hasil terbaik
+            if (bestMatch) {
+                map.flyTo([bestMatch.lat, bestMatch.lng], 13, {
+                    animate: true,
+                    duration: 2.0 
+                });
+
+                setTimeout(() => {
+                    const targetMarker = portMarkers[bestMatch.code];
+                    if (targetMarker) {
+                        portCluster.zoomToShowLayer(targetMarker, function () {
+                            targetMarker.openPopup();
+                        });
+                    }
+                }, 2000);
+                
+            } else {
+                const originalPlaceholder = searchInput.placeholder;
+                searchInput.value = '';
+                searchInput.placeholder = 'Pelabuhan tidak ditemukan!';
+                searchInput.classList.add('text-danger');
+                
+                setTimeout(() => {
+                    searchInput.placeholder = originalPlaceholder;
+                    searchInput.classList.remove('text-danger');
+                }, 2000);
+            }
+        }
+
+        searchBtn.addEventListener('click', executeSearch);
+        searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeSearch();
+            }
+        });
+
+        // 5. ANIMASI RADAR CUACA (DINAMIS DARI OPEN-METEO)
+        const radarIcon = L.divIcon({
             className: 'radar-pulse',
             iconSize: [50, 50],
             iconAnchor: [25, 25]
         });
 
-        // Contoh: Anomali cuaca di Laut Filipina
-        const stormMarker = L.marker([15.0, 125.0], {icon: weatherIcon})
-            .bindPopup(`<strong class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Typhoon Warning</strong><br><small>Wind: 120 km/h | Avoid Area</small>`);
-        weatherLayer.addLayer(stormMarker);
+        // Ambil data koordinat 195 negara
+        fetch('/api/countries')
+            .then(res => res.json())
+            .then(countries => {
+                countries.forEach(country => {
+                    // Buat titik kecil transparan sebagai sensor cuaca
+                    let weatherSensor = L.circleMarker([country.lat, country.lng], {
+                        radius: 6, fillColor: "#ef4444", color: "#fff", weight: 1, fillOpacity: 0.5
+                    }).bindPopup("📡 Memindai cuaca satelit...");
 
-        // 5. LOGIKA TOMBOL TOGGLE (ON/OFF)
+                    // Saat titik diklik, panggil API Open-Meteo
+                    weatherSensor.on('click', function() {
+                        fetch(`/api/weather/live?lat=${country.lat}&lng=${country.lng}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                // 1. BACA DATA DARI STRUKTUR 'CURRENT'
+                                const current = data.current || {};
+                                const temp = current.temperature_2m ?? '--';
+                                const wind = current.wind_speed_10m ?? '--';
+                                const code = current.weather_code ?? 0;
+
+                                // 2. ALGORITMA MINI-DSS (Kalkulasi Risiko Badai Berdasarkan Kode WMO)
+                                let stormRisk = 'Low';
+                                let badgeColor = 'bg-success';
+                                let condition = 'Cerah / Berawan';
+                                let icon = 'fa-solid fa-cloud-sun text-secondary';
+
+                                // Jika kode menunjukkan badai petir (95, 96, 99) atau angin > 60
+                                if ([95, 96, 99].includes(code) || wind > 60) {
+                                    stormRisk = 'High';
+                                    badgeColor = 'bg-danger';
+                                    condition = 'Peringatan Badai';
+                                    icon = 'fa-solid fa-cloud-bolt text-danger';
+                                } 
+                                // Jika kode menunjukkan hujan (61-82) atau angin > 40
+                                else if ([61, 63, 65, 80, 81, 82].includes(code) || wind > 40) {
+                                    stormRisk = 'Medium';
+                                    badgeColor = 'bg-warning text-dark';
+                                    condition = 'Hujan / Angin Kencang';
+                                    icon = 'fa-solid fa-cloud-showers-heavy text-primary';
+                                }
+
+                                // 3. TAMPILKAN KE POPUP UI
+                                let popupHtml = `
+                                    <div class="text-center p-1">
+                                        <h6 class="mb-1 fw-bold text-dark">${country.name}</h6>
+                                        <i class="${icon} mb-2" style="font-size: 2rem;"></i>
+                                        <p class="mb-1 text-muted" style="font-size: 0.85rem;">${condition}</p>
+                                        <hr class="my-1">
+                                        <div class="d-flex justify-content-between mb-1" style="font-size: 0.8rem;">
+                                            <span>🌡️ ${temp}°C</span>
+                                            <span>💨 ${wind} km/h</span>
+                                        </div>
+                                        <span class="badge ${badgeColor} w-100 mt-1">Risk: ${stormRisk}</span>
+                                    </div>
+                                `;
+                                weatherSensor.setPopupContent(popupHtml);
+
+                                // 4. JIKA BADAI (High Risk), MUNCULKAN RADAR MERAH BERKEDIP!
+                                if (stormRisk === 'High') {
+                                    L.marker([country.lat, country.lng], {icon: radarIcon}).addTo(weatherLayer);
+                                }
+                            })
+                            .catch(err => console.error("Gagal memuat cuaca", err));
+                    });
+                    
+                    weatherSensor.addTo(weatherLayer);
+                });
+            });
+
+        // 6. TOGGLE ON/OFF
         document.getElementById('togglePorts').addEventListener('change', function(e) {
             if (e.target.checked) map.addLayer(portCluster);
             else map.removeLayer(portCluster);
