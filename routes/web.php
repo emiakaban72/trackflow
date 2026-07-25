@@ -27,11 +27,30 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.process');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // ==========================================
-// RUTE HALAMAN UTAMA / DASHBOARD DEPAN (PUBLIK)
+// RUTE TERPROTEKSI (WAJIB LOGIN)
 // ==========================================
+Route::middleware(['auth'])->group(function () {
+    Route::get('/', [CountryController::class, 'index'])->name('home');
+    Route::get('/country', [CountryController::class, 'index'])->name('country.index');
+    Route::post('/country', [CountryController::class, 'search'])->name('country.search');
 
-// GAS! Arahkan langsung ke CountryController agar semua API otomatis jalan
-Route::get('/', [CountryController::class, 'index']); 
+    // Halaman Peta
+    Route::get('/geospatial/map', [MapController::class, 'index'])->name('map.index');
+
+    // Market Intelligence
+    Route::get('/market/currency', [MarketIntelligenceController::class, 'currency'])->name('market.currency');
+    Route::get('/market/news', [MarketIntelligenceController::class, 'news'])->name('market.news');
+
+    // Analytics & Risk
+    Route::get('/analytics/risk', [RiskController::class, 'index'])->name('analytics.risk');
+    Route::get('/analytics/visualization', [VisualizationController::class, 'index'])->name('analytics.visualization');
+    Route::get('/analytics/comparison', [ComparisonController::class, 'index'])->name('analytics.comparison');
+
+    // Favorit
+    Route::get('/favorite', [FavoriteController::class, 'index'])->name('favorite.index');
+    Route::post('/favorite/toggle', [FavoriteController::class, 'toggle'])->name('favorite.toggle');
+});
+
 
 
 // ==========================================
@@ -62,12 +81,7 @@ Route::middleware(['auth', PreventBackHistory::class, AdminOnly::class])->prefix
     
 });
 
-// Rute Pencarian Negara (dari teman)
-Route::get('/country', [CountryController::class, 'index'])->name('country.index');
-Route::post('/country', [CountryController::class, 'search'])->name('country.search');
 
-// 1. Rute untuk menampilkan Halaman Peta
-Route::get('/geospatial/map', [MapController::class, 'index'])->name('map.index');
 
 // 2. Rute REST API untuk menyedot data pelabuhan
 // Tambahkan '/api' di sini agar cocok dengan perintah fetch() di Javascript
