@@ -146,16 +146,3 @@ Route::get('/api/currency', function (Request $request, App\Services\ExchangeRat
     ]);
 });
 
-
-// // Rute untuk Market Intelligence
-Route::get('/market/currency', [MarketIntelligenceController::class, 'currency'])->name('market.currency');
-Route::get('/market/news', [MarketIntelligenceController::class, 'news'])->name('market.news');
-
-
-
-// // Route untuk halaman Risk Scoring Engine
-Route::get('/analytics/risk', [RiskController::class, 'index'])->name('analytics.risk');
-Route::get('/analytics/visualization', [VisualizationController::class, 'index'])->name('analytics.visualization');
-Route::get('/analytics/comparison', [ComparisonController::class, 'index'])->name('analytics.comparison');
-Route::get('/favorite', [FavoriteController::class, 'index'])->name('favorite.index');
-Route::post('/favorite/toggle', [FavoriteController::class, 'toggle'])->name('favorite.toggle');
