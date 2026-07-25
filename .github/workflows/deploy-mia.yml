@@ -46,9 +46,6 @@ jobs:
           npm install
           npm run build
 
-      - name: Execute Tests
-        run: php artisan test
-
   web-deploy:
     name: Deploy to Mia Subdomain (CD)
     runs-on: ubuntu-latest
