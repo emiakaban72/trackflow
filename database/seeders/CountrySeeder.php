@@ -55,7 +55,13 @@ class CountrySeeder extends Seeder
             'Yemen'=>[15.0,48.0], 'Zambia'=>[-15.0,30.0], 'Zimbabwe'=>[-20.0,30.0]
         ];
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys=OFF;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        }
 
         // Menggunakan updateOrInsert agar kebal dari error duplicate entry!
         foreach ($allCountries as $name => $coords) {
@@ -70,7 +76,11 @@ class CountrySeeder extends Seeder
             );
         }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys=ON;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        }
 
         $count = DB::table('countries')->count();
         $this->command->info("✅ SUKSES! {$count} Negara PBB telah disuntikkan tanpa memotong kuota API-mu.");

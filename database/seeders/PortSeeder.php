@@ -38,7 +38,14 @@ class PortSeeder extends Seeder
             return;
         }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys=OFF;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        }
+
         DB::table('ports')->truncate();
 
         $dataToInsert = [];
@@ -102,7 +109,12 @@ class PortSeeder extends Seeder
         }
 
         fclose($handle);
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys=ON;');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        }
 
         $count = Port::count();
         $this->command->info("🌍 FINALISASI ETL SUKSES! {$count} pelabuhan dari Dataset Kaggle telah masuk ke sistemmu.");
